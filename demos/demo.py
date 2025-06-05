@@ -11,30 +11,31 @@ from textual.widgets import Static, Button, ListView, ListItem, Label, RichLog
 from textual.containers import Vertical, Horizontal
 from textual.reactive import reactive
 
-from textual_progress import ProgressNode, Spinner, TaskInfo
+from textual_progress import Task, Spinner, TaskInfo
 
 
 # Task factory functions
-def create_manual_task(title: str) -> ProgressNode:
+def create_manual_task(title: str) -> Task:
     """Create a manual task that needs user control."""
-    task = ProgressNode(title)
-    task.local_total = None  # Indeterminate
+    task = Task(title)
+    task.local_total = 5  # 5 steps
+    task.local_progress = 0  # Start at 0
     logging.info(f"Created: {title}")
     return task
 
 
-def create_auto_task(title: str) -> ProgressNode:
+def create_auto_task(title: str) -> Task:
     """Create an auto task that starts immediately."""
-    task = ProgressNode(title)
+    task = Task(title)
     task.local_total = None  # Indeterminate
     task.add_class("active")
     logging.info(f"Created: {title} (active)")
     return task
 
 
-def create_percent_task(title: str, total: int = 100) -> ProgressNode:
+def create_percent_task(title: str, total: int = 100) -> Task:
     """Create a percentage task that can be started."""
-    task = ProgressNode(title)
+    task = Task(title)
     task.local_total = total
     task.local_progress = 0
     logging.info(f"Created: {title} (0/{total})")
@@ -47,7 +48,7 @@ def create_none_task() -> None:
     return None
 
 
-def start_percent_task(task: ProgressNode, app_instance) -> None:
+def start_percent_task(task: Task, app_instance) -> None:
     """Start a percentage task with automatic progress updates."""
     task.add_class("active")
     logging.info(f"Starting percent task: {task.title}")
@@ -154,7 +155,7 @@ class ProgressDemo(App):
     """
 
     # Reactive task that all spinners will watch
-    task = reactive[ProgressNode | None](None)
+    task = reactive[Task | None](None)
 
     def compose(self) -> ComposeResult:
         """Create the app layout."""
@@ -213,7 +214,7 @@ class ProgressDemo(App):
         logging.info("App started, waiting for task selection...")
         logging.info("Testing file change detection...")
 
-    def watch_task(self, task: ProgressNode | None) -> None:
+    def watch_task(self, task: Task | None) -> None:
         """Watch for task changes and update spinner."""
         logging.info(f"Task changed to: {task.title if task else None}")
 

@@ -13,16 +13,16 @@ from textual.widget import Widget
 from textual.reactive import reactive
 
 if TYPE_CHECKING:
-    from ..dom.progress import ProgressNode
+    from ..task import Task
 
 
 class TaskInfo(Widget):
-    """A widget that displays detailed information about a ProgressNode.
+    """A widget that displays detailed information about a Task.
 
     Shows key attributes like title, progress, total, percentage, and state classes.
 
     Attributes:
-        task: The ProgressNode to display information for
+        task: The Task to display information for
     """
 
     DEFAULT_CSS = """
@@ -35,13 +35,13 @@ class TaskInfo(Widget):
     """
 
     # Reactive attributes
-    task = reactive[Optional["ProgressNode"]](None)
+    task = reactive[Optional["Task"]](None)
 
-    def __init__(self, task: Optional["ProgressNode"] = None, **kwargs):
+    def __init__(self, task: Optional["Task"] = None, **kwargs):
         """Initialize the task info widget.
 
         Args:
-            task: ProgressNode to display information for
+            task: Task to display information for
             **kwargs: Additional widget arguments
         """
         super().__init__(**kwargs)
@@ -92,7 +92,7 @@ class TaskInfo(Widget):
 
         return "\n".join(lines)
 
-    def watch_task(self, task: Optional["ProgressNode"]) -> None:
+    def watch_task(self, task: Optional["Task"]) -> None:
         """Handle changes to the task being watched.
 
         Args:

@@ -5,8 +5,8 @@ This package provides a flexible progress tracking system with automatic aggrega
 and a variety of visualization widgets.
 """
 
-from .dom.progress import ProgressNode
+from .task import Task
 from .widgets import Spinner, TaskInfo
 
 __version__ = "0.1.0"
-__all__ = ["ProgressNode", "Spinner", "TaskInfo"]
+__all__ = ["Task", "Spinner", "TaskInfo"]

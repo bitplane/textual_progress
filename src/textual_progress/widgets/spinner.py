@@ -14,7 +14,7 @@ from textual.widget import Widget
 from textual.reactive import reactive
 
 if TYPE_CHECKING:
-    from ..dom.progress import ProgressNode
+    from ..task import Task
 
 
 class Spinner(Widget):
@@ -38,17 +38,17 @@ class Spinner(Widget):
     """
 
     # Reactive attributes
-    task = reactive[Optional["ProgressNode"]](None)
+    task = reactive[Optional["Task"]](None)
     frames = reactive(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])  # Braille spinner
     speed = reactive(0.08)
 
     def __init__(
-        self, task: Optional["ProgressNode"] = None, frames: Optional[list[str]] = None, speed: float = 0.08, **kwargs
+        self, task: Optional["Task"] = None, frames: Optional[list[str]] = None, speed: float = 0.08, **kwargs
     ):
         """Initialize the spinner widget.
 
         Args:
-            task: ProgressNode to watch for completion
+            task: Task to watch for completion
             frames: List of characters to animate through
             speed: Time between frame changes in seconds
             **kwargs: Additional widget arguments
@@ -81,7 +81,7 @@ class Spinner(Widget):
                 return "●"  # Show filled circle when task is stopped/complete
         return self.frames[self._current_frame]
 
-    def watch_task(self, task: Optional["ProgressNode"]) -> None:
+    def watch_task(self, task: Optional["Task"]) -> None:
         """Handle changes to the task being watched.
 
         Args:

@@ -1,7 +1,7 @@
 """
-Progress DOM Node - Universal progress tracking with automatic aggregation.
+Task - Universal progress tracking with automatic aggregation.
 
-This module provides a DOMNode-based progress system that automatically
+This module provides a reactive task system that automatically
 aggregates child progress and integrates with Textual's reactive system.
 """
 
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     pass
 
 
-class ProgressNode(DOMNode):
-    """A DOM node that tracks progress and automatically aggregates from children.
+class Task(DOMNode):
+    """A task that tracks progress and automatically aggregates from children.
 
     This class provides a universal progress protocol that aligns with Textual's
     ProgressBar while supporting hierarchical aggregation. Any widget can watch
@@ -44,15 +44,15 @@ class ProgressNode(DOMNode):
     _local_total = reactive[Optional[float]](None)
 
     def __init__(self, title: str = "", total: Optional[float] = None, **kwargs):
-        """Initialize a progress node.
+        """Initialize a task.
 
         Args:
-            title: Display title for this progress item
+            title: Display title for this task
             total: Total number of steps/units (None for indeterminate)
             **kwargs: Additional DOMNode arguments
         """
         # Initialize children dict before calling super() to avoid any reactive issues
-        self._children: Dict[str, ProgressNode] = {}
+        self._children: Dict[str, Task] = {}
 
         super().__init__(**kwargs)
         self.title = title
@@ -66,17 +66,17 @@ class ProgressNode(DOMNode):
         # Initial aggregation
         self._update_aggregation()
 
-    def __getitem__(self, key: str) -> ProgressNode:
-        """Get or create a child progress node.
+    def __getitem__(self, key: str) -> Task:
+        """Get or create a child task.
 
         Args:
-            key: Identifier for the child node
+            key: Identifier for the child task
 
         Returns:
-            The child ProgressNode (created if it doesn't exist)
+            The child Task (created if it doesn't exist)
         """
         if key not in self._children:
-            child = ProgressNode(title=key)
+            child = Task(title=key)
             self._children[key] = child
             self.mount(child)  # Add to DOM tree
 
@@ -87,12 +87,12 @@ class ProgressNode(DOMNode):
 
         return self._children[key]
 
-    def __setitem__(self, key: str, node: ProgressNode) -> None:
-        """Set a child progress node.
+    def __setitem__(self, key: str, node: "Task") -> None:
+        """Set a child task.
 
         Args:
-            key: Identifier for the child node
-            node: The ProgressNode to set as child
+            key: Identifier for the child task
+            node: The Task to set as child
         """
         if key in self._children:
             # Remove old child
@@ -108,7 +108,7 @@ class ProgressNode(DOMNode):
         node.watch("title", self._update_aggregation)
 
     def __contains__(self, key: str) -> bool:
-        """Check if a child progress node exists.
+        """Check if a child task exists.
 
         Args:
             key: Identifier to check
@@ -123,11 +123,11 @@ class ProgressNode(DOMNode):
         return iter(self._children)
 
     def items(self):
-        """Get (key, node) pairs for children."""
+        """Get (key, task) pairs for children."""
         return self._children.items()
 
     def values(self):
-        """Get child nodes."""
+        """Get child tasks."""
         return self._children.values()
 
     @property
@@ -152,22 +152,22 @@ class ProgressNode(DOMNode):
 
     @property
     def local_progress(self) -> float:
-        """This node's progress excluding children."""
+        """This task's progress excluding children."""
         return self._local_progress
 
     @local_progress.setter
     def local_progress(self, value: float) -> None:
-        """Set this node's local progress."""
+        """Set this task's local progress."""
         self._local_progress = value
 
     @property
     def local_total(self) -> Optional[float]:
-        """This node's total excluding children."""
+        """This task's total excluding children."""
         return self._local_total
 
     @local_total.setter
     def local_total(self, value: Optional[float]) -> None:
-        """Set this node's local total."""
+        """Set this task's local total."""
         self._local_total = value
 
     @property
