@@ -11,7 +11,7 @@ from textual.widgets import Static, Button, ListView, ListItem, Label, RichLog
 from textual.containers import Vertical, Horizontal
 from textual.reactive import reactive
 
-from textual_progress import ProgressNode, Spinner
+from textual_progress import ProgressNode, Spinner, TaskInfo
 
 
 # Task factory functions
@@ -19,7 +19,7 @@ def create_manual_task(title: str) -> ProgressNode:
     """Create a manual task that needs user control."""
     task = ProgressNode(title)
     task.local_total = None  # Indeterminate
-    logging.info(f"Created manual task: {title}")
+    logging.info(f"Created: {title}")
     return task
 
 
@@ -28,7 +28,7 @@ def create_auto_task(title: str) -> ProgressNode:
     task = ProgressNode(title)
     task.local_total = None  # Indeterminate
     task.add_class("active")
-    logging.info(f"Created auto task (active): {title}")
+    logging.info(f"Created: {title} (active)")
     return task
 
 
@@ -37,13 +37,13 @@ def create_percent_task(title: str, total: int = 100) -> ProgressNode:
     task = ProgressNode(title)
     task.local_total = total
     task.local_progress = 0
-    logging.info(f"Created percent task: {title} (0/{total})")
+    logging.info(f"Created: {title} (0/{total})")
     return task
 
 
 def create_none_task() -> None:
     """Create no task - returns None to clear selection."""
-    logging.info("Cleared task selection")
+    logging.info("Cleared selection")
     return None
 
 
@@ -174,6 +174,7 @@ class ProgressDemo(App):
 
             # Spinners panel (right side)
             with Vertical(id="spinners"):
+                yield TaskInfo(id="task-info")
                 yield Static("Spinner:")
                 yield Spinner(id="spinner")
 
@@ -216,23 +217,23 @@ class ProgressDemo(App):
         """Watch for task changes and update spinner."""
         logging.info(f"Task changed to: {task.title if task else None}")
 
-        # Update spinner with the new task
+        # Update widgets with the new task
         spinner = self.query_one("#spinner", Spinner)
         spinner.task = task
-        logging.info(f"Updated spinner with task: {task.title if task else None}")
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """Handle task selection."""
+        task_info = self.query_one("#task-info", TaskInfo)
+        task_info.task = task
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Handle task navigation - create task when highlighted."""
         if isinstance(event.item, TaskItem):
             task_name = event.item.task_name
-            logging.info(f"Selected task: {task_name}")
 
             # Get task config from registry
             factory_func, args, start_func = TASK_REGISTRY[task_name]
 
             # Create the task using factory function and args
             self.task = factory_func(*args)
-            logging.info(f"Created and assigned task: {self.task.title if self.task else 'None'}")
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

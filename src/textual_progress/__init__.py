@@ -6,7 +6,7 @@ and a variety of visualization widgets.
 """
 
 from .dom.progress import ProgressNode
-from .widgets import Spinner
+from .widgets import Spinner, TaskInfo
 
 __version__ = "0.1.0"
-__all__ = ["ProgressNode", "Spinner"]
+__all__ = ["ProgressNode", "Spinner", "TaskInfo"]
