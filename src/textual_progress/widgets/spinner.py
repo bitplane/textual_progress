@@ -72,8 +72,13 @@ class Spinner(Widget):
         Returns:
             The current character to display
         """
-        if not self._is_spinning or not self.frames:
+        if not self.frames:
             return " "
+        if not self._is_spinning:
+            if self.task is None:
+                return "○"  # Show placeholder when no task
+            else:
+                return "●"  # Show filled circle when task is stopped/complete
         return self.frames[self._current_frame]
 
     def watch_task(self, task: Optional["ProgressNode"]) -> None:
