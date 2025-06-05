@@ -3,12 +3,6 @@
 Simple spinner demo showing the basic Spinner widget in action.
 """
 
-import sys
-from pathlib import Path
-
-# Add the src directory to the path so we can import our package
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 from textual.app import App, ComposeResult
 from textual.widgets import Static, Button
 from textual.containers import Vertical, Horizontal

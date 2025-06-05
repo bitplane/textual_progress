@@ -1,6 +1,6 @@
 # the things that don't have output files or run every time
 .PHONY: help all install test dev coverage clean \
-		pre-commit update-pre-commit dist
+		pre-commit update-pre-commit dist demo
 
 
 PROJECT_NAME := textual_progress
@@ -34,6 +34,9 @@ dist: scripts/dist.sh ## build the distributable files
 
 release: scripts/release.sh ## publish to pypi
 	scripts/release.sh $(PROJECT_NAME)
+
+demo: install ## run the demo app with auto-restart on file changes
+	./scripts/run.sh ./demos/demo.py
 
 # Caching doesn't work if we depend on PHONY targets
 
