@@ -53,6 +53,11 @@ class Spinner(Widget):
             speed: Time between frame changes in seconds
             **kwargs: Additional widget arguments
         """
+        # Animation state - initialize before super() to avoid reactive issues
+        self._current_frame = 0
+        self._animation_task: Optional[asyncio.Task] = None
+        self._is_spinning = False
+
         super().__init__(**kwargs)
 
         if task is not None:
@@ -60,11 +65,6 @@ class Spinner(Widget):
         if frames is not None:
             self.frames = frames
         self.speed = speed
-
-        # Animation state
-        self._current_frame = 0
-        self._animation_task: Optional[asyncio.Task] = None
-        self._is_spinning = False
 
     def render(self) -> str:
         """Render the current spinner frame.
@@ -86,8 +86,8 @@ class Spinner(Widget):
             self._stop_spinning()
         else:
             # Watch for task completion
-            task.watch("progress", self._on_task_progress)
-            task.watch("total", self._on_task_progress)
+            self.watch(task, "progress", self._on_task_progress)
+            self.watch(task, "total", self._on_task_progress)
             self._update_spinning_state()
 
     def watch_frames(self, frames: list[str]) -> None:
@@ -111,7 +111,7 @@ class Spinner(Widget):
             self._stop_spinning()
             self._start_spinning()
 
-    def _on_task_progress(self) -> None:
+    def _on_task_progress(self, *args) -> None:
         """Handle progress changes in the watched task."""
         self._update_spinning_state()
 
