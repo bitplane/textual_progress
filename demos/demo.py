@@ -95,21 +95,21 @@ class ProgressDemo(App):
 
     CSS = """
     Screen {
+        layout: vertical;
+    }
+
+    #top-area {
         layout: horizontal;
+        height: 2fr;
     }
 
     #tasks {
-        width: 20;
+        width: 22;
         padding: 1;
     }
 
-    #main-content {
-        layout: vertical;
-        width: 1fr;
-    }
-
     #spinners {
-        height: 2fr;
+        width: 1fr;
         padding: 1;
     }
 
@@ -122,15 +122,16 @@ class ProgressDemo(App):
         height: 3;
         width: 100%;
         dock: bottom;
+        layout: horizontal;
     }
 
     .controls Button {
-        width: 3;
+        width: 1fr;
         height: 3;
         margin: 0;
-        min-width: 3;
         padding: 0;
         content-align: center middle;
+        max-width: 5;
     }
 
     ListView {
@@ -157,28 +158,28 @@ class ProgressDemo(App):
 
     def compose(self) -> ComposeResult:
         """Create the app layout."""
-        # Tasks panel (left side)
-        with Vertical(id="tasks"):
-            items = [TaskItem(name) for name in TASK_REGISTRY.keys()]
-            yield ListView(*items, id="task-list")
+        # Top area with tasks and spinners
+        with Horizontal(id="top-area"):
+            # Tasks panel (left side)
+            with Vertical(id="tasks"):
+                items = [TaskItem(name) for name in TASK_REGISTRY.keys()]
+                yield ListView(*items, id="task-list")
 
-            # Controls
-            with Horizontal(classes="controls"):
-                yield Button("▶", id="play")
-                yield Button("⏹", id="stop")
-                yield Button("⏮", id="reset")
-                yield Button("⏭", id="done")
+                # Controls
+                with Horizontal(classes="controls"):
+                    yield Button("▶", id="play")
+                    yield Button("⏹", id="stop")
+                    yield Button("⏮", id="reset")
+                    yield Button("⏭", id="done")
 
-        # Main content area (right side)
-        with Vertical(id="main-content"):
-            # Spinners panel
+            # Spinners panel (right side)
             with Vertical(id="spinners"):
                 yield Static("Spinner:")
                 yield Spinner(id="spinner")
 
-            # Log panel
-            with Vertical(id="log-panel"):
-                yield RichLog(id="log")
+        # Log panel (bottom, full width)
+        with Vertical(id="log-panel"):
+            yield RichLog(id="log")
 
     def on_mount(self) -> None:
         """Set up logging when the app starts."""
