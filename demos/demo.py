@@ -127,6 +127,25 @@ class ProgressDemo(App):
         text-style: bold;
     }
 
+    #speed-controls {
+        height: 1;
+    }
+
+    #speed-down, #speed-up {
+        max-width: 1;
+        max-height: 1;
+        width: 1;
+        height: 1;
+        padding: 0;
+        border: none;
+        margin-left: 1;
+    }
+
+    #speed-display {
+        width: auto;
+        height: 1;
+    }
+
     #textual-label {
         margin-left: 2;
         content-align: left middle;
@@ -194,7 +213,7 @@ class ProgressDemo(App):
                 # Controls
                 with Horizontal(classes="controls"):
                     yield Button("▶", id="play")
-                    yield Button("⏹", id="stop")
+                    yield Button("■", id="stop")
                     yield Button("⏮", id="reset")
                     yield Button("⏭", id="done")
 
@@ -219,6 +238,13 @@ class ProgressDemo(App):
 
                     yield OptionList(*[Option(name, id=name) for name in spinner_names], id="spinner-list")
                     yield Spinner(id="rich-spinner")
+
+                # Speed control
+                yield Static()
+                with Horizontal(id="speed-controls"):
+                    yield Static("Speed: 0.080/sec", id="speed-display")
+                    yield Button("-", id="speed-down")
+                    yield Button("+", id="speed-up")
 
                 # Multi-line Spinner section
                 yield Static()
@@ -325,6 +351,14 @@ class ProgressDemo(App):
             self.task.complete()
             logging.info(f"Completed task: {self.task.title}")
 
+        elif button_id == "speed-up":
+            # Decrease time (speed up) by 0.01s, min 0.01s
+            self.current_speed = max(0.01, self.current_speed - 0.01)
+
+        elif button_id == "speed-down":
+            # Increase time (slow down) by 0.01s, max 0.5s
+            self.current_speed = min(0.5, self.current_speed + 0.01)
+
     def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         """Handle spinner option highlighting (navigation)."""
         if event.option_list.id == "spinner-list":
@@ -338,6 +372,23 @@ class ProgressDemo(App):
                 logging.info(f"Rich spinner changed to {spinner_name} with {len(rich_spinner.frames)} frames")
             except ValueError as e:
                 logging.error(f"Failed to set Rich spinner: {e}")
+
+    current_speed = reactive(0.08)  # Track current speed
+
+    def watch_current_speed(self, speed: float) -> None:
+        """Update spinner speeds and display when current_speed changes."""
+        # Update both spinners
+        rich_spinner = self.query_one("#rich-spinner", Spinner)
+        textual_spinner = self.query_one("#textual-spinner", Spinner)
+
+        rich_spinner.speed = speed
+        textual_spinner.speed = speed
+
+        # Update display
+        speed_display = self.query_one("#speed-display", Static)
+        speed_display.update(f"Speed: {speed:.3f}/sec")
+
+        logging.info(f"Speed changed to: {speed:.3f}s")
 
 
 if __name__ == "__main__":
