@@ -7,7 +7,7 @@ import sys
 import asyncio
 import logging
 from textual.app import App, ComposeResult
-from textual.widgets import Static, Button, ListView, ListItem, Label, RichLog
+from textual.widgets import Static, Button, ListView, ListItem, Label, RichLog, OptionList
 from textual.containers import Vertical, Horizontal
 from textual.reactive import reactive
 
@@ -17,17 +17,14 @@ from textual_progress import Task, Spinner, TaskInfo
 # Task factory functions
 def create_manual_task(title: str) -> Task:
     """Create a manual task that needs user control."""
-    task = Task(title)
-    task.local_total = 5  # 5 steps
-    task.local_progress = 0  # Start at 0
+    task = Task(title, total=5)  # 5 steps
     logging.info(f"Created: {title}")
     return task
 
 
 def create_auto_task(title: str) -> Task:
     """Create an auto task that starts immediately."""
-    task = Task(title)
-    task.local_total = None  # Indeterminate
+    task = Task(title, total=None)  # Indeterminate
     task.add_class("active")
     logging.info(f"Created: {title} (active)")
     return task
@@ -35,9 +32,7 @@ def create_auto_task(title: str) -> Task:
 
 def create_percent_task(title: str, total: int = 100) -> Task:
     """Create a percentage task that can be started."""
-    task = Task(title)
-    task.local_total = total
-    task.local_progress = 0
+    task = Task(title, total=total)
     logging.info(f"Created: {title} (0/{total})")
     return task
 
@@ -54,12 +49,12 @@ def start_percent_task(task: Task, app_instance) -> None:
     logging.info(f"Starting percent task: {task.title}")
 
     async def update_progress():
-        total = int(task.local_total or 100)
+        total = int(task.total or 100)
         for i in range(total + 1):
             if not task or task.has_class("failed"):
                 logging.info(f"Percent task stopped: {task.title}")
                 break
-            task.local_progress = i
+            task.local_completed = i
             if i % 10 == 0:  # Log every 10%
                 logging.info(f"Percent task progress: {task.title} {i}/{total}")
             await asyncio.sleep(0.1)
@@ -112,6 +107,38 @@ class ProgressDemo(App):
     #spinners {
         width: 1fr;
         padding: 1;
+        overflow-y: auto;
+    }
+
+    #textual-spinner-row, #rich-spinner-row {
+        height: 3;
+        align: left middle;
+    }
+
+    #rich-spinner {
+        height: 3;
+    }
+
+    .heading {
+        text-style: bold underline;
+    }
+
+    .subheading {
+        text-style: bold;
+    }
+
+    #textual-label {
+        margin-left: 2;
+        content-align: left middle;
+        color: $text-muted;
+    }
+
+    #spinner-list {
+        width: auto;
+        margin-right: 2;
+        height: 3;
+        border: none;
+        min-width: 25;
     }
 
     #log-panel {
@@ -140,16 +167,14 @@ class ProgressDemo(App):
     }
 
     Spinner {
-        width: 5;
         height: 3;
         margin: 0 1;
-        content-align: center middle;
     }
 
     RichLog {
         height: 100%;
         border: solid;
-        padding: 1;
+        padding: 0 1;
         margin: 0;
     }
     """
@@ -176,8 +201,31 @@ class ProgressDemo(App):
             # Spinners panel (right side)
             with Vertical(id="spinners"):
                 yield TaskInfo(id="task-info")
-                yield Static("Spinner:")
-                yield Spinner(id="spinner")
+
+                # Main heading
+                yield Static()
+                yield Label("Spinners", classes="heading")
+
+                # Rich Spinner section
+                yield Static()
+                yield Label("Rich", classes="subheading")
+                with Horizontal(id="rich-spinner-row"):
+                    # Get available Rich spinners for the list (filter out problematic ones)
+                    from rich.spinner import SPINNERS
+
+                    # Get all available Rich spinners
+                    spinner_names = list(SPINNERS.keys())
+                    from textual.widgets.option_list import Option
+
+                    yield OptionList(*[Option(name, id=name) for name in spinner_names], id="spinner-list")
+                    yield Spinner(id="rich-spinner")
+
+                # Multi-line Spinner section
+                yield Static()
+                yield Label("Multi-line", classes="subheading")
+                with Horizontal(id="textual-spinner-row"):
+                    yield Spinner(id="textual-spinner")
+                    yield Static("[Built-in]", id="textual-label")
 
         # Log panel (bottom, full width)
         with Vertical(id="log-panel"):
@@ -219,8 +267,11 @@ class ProgressDemo(App):
         logging.info(f"Task changed to: {task.title if task else None}")
 
         # Update widgets with the new task
-        spinner = self.query_one("#spinner", Spinner)
-        spinner.task = task
+        textual_spinner = self.query_one("#textual-spinner", Spinner)
+        textual_spinner.task = task
+
+        rich_spinner = self.query_one("#rich-spinner", Spinner)
+        rich_spinner.task = task
 
         task_info = self.query_one("#task-info", TaskInfo)
         task_info.task = task
@@ -273,6 +324,20 @@ class ProgressDemo(App):
         elif button_id == "done":
             self.task.complete()
             logging.info(f"Completed task: {self.task.title}")
+
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        """Handle spinner option highlighting (navigation)."""
+        if event.option_list.id == "spinner-list":
+            spinner_name = str(event.option.id)
+            logging.info(f"Changed spinner to: {spinner_name}")
+
+            # Update the Rich spinner
+            rich_spinner = self.query_one("#rich-spinner", Spinner)
+            try:
+                rich_spinner.set_rich_spinner(spinner_name)
+                logging.info(f"Rich spinner changed to {spinner_name} with {len(rich_spinner.frames)} frames")
+            except ValueError as e:
+                logging.error(f"Failed to set Rich spinner: {e}")
 
 
 if __name__ == "__main__":

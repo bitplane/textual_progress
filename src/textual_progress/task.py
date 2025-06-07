@@ -1,46 +1,50 @@
 """
 Task - Universal progress tracking with automatic aggregation.
 
-This module provides a reactive task system that automatically
-aggregates child progress and integrates with Textual's reactive system.
+A reactive task system that automatically aggregates child progress
+and supports async context managers for automatic lifecycle management.
 """
 
 from __future__ import annotations
 
 from time import time
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, Optional
+from threading import RLock
 
 from textual.dom import DOMNode
 from textual.reactive import reactive
-
-if TYPE_CHECKING:
-    pass
+from rich.progress import Task as RichTask, TaskID
+from rich.spinner import SPINNERS
 
 
 class Task(DOMNode):
     """A task that tracks progress and automatically aggregates from children.
 
-    This class provides a universal progress protocol that aligns with Textual's
-    ProgressBar while supporting hierarchical aggregation. Any widget can watch
-    these nodes for changes and update their display accordingly.
+    Supports both manual control and automatic lifecycle management via async context managers.
+    Tasks can be nested and will automatically aggregate progress from children.
 
     Attributes:
-        progress: Current completed steps/units
+        completed: Current completed steps/units
         total: Total steps/units (None for indeterminate progress)
-        title: Display title for this progress item
-        start_time: When this progress started (Unix timestamp)
+        title: Display title for this task
+        start_time: When this task was started (Unix timestamp)
         last_updated: When this was last modified (Unix timestamp)
     """
 
-    # Core progress attributes (align with Textual ProgressBar)
-    progress = reactive(0.0)
+    # Core progress attributes
+    completed = reactive(0.0)
+    """Current completed steps/units"""
     total = reactive[Optional[float]](None)
+    """Total steps/units (None for indeterminate progress)"""
     title = reactive("")
+    """Display title for this task"""
     start_time = reactive[Optional[float]](None)
+    """When this task was started (Unix timestamp)"""
     last_updated = reactive[Optional[float]](None)
+    """When this was last modified (Unix timestamp)"""
 
     # Local values (not including children)
-    _local_progress = reactive(0.0)
+    _local_completed = reactive(0.0)
     _local_total = reactive[Optional[float]](None)
 
     def __init__(self, title: str = "", total: Optional[float] = None, **kwargs):
@@ -59,9 +63,7 @@ class Task(DOMNode):
 
         # Set initial values (may trigger watchers, so _children must exist first)
         self._local_total = total
-
-        if total is not None:
-            self.start_time = time()
+        self.total = total
 
         # Initial aggregation
         self._update_aggregation()
@@ -139,7 +141,7 @@ class Task(DOMNode):
         """
         if self.total is None or self.total == 0:
             return None
-        return min(1.0, max(0.0, self.progress / self.total))
+        return min(1.0, max(0.0, self.completed / self.total))
 
     @property
     def is_indeterminate(self) -> bool:
@@ -151,14 +153,14 @@ class Task(DOMNode):
         return self.total is None
 
     @property
-    def local_progress(self) -> float:
-        """This task's progress excluding children."""
-        return self._local_progress
+    def local_completed(self) -> float:
+        """This task's completed amount excluding children."""
+        return self._local_completed
 
-    @local_progress.setter
-    def local_progress(self, value: float) -> None:
-        """Set this task's local progress."""
-        self._local_progress = value
+    @local_completed.setter
+    def local_completed(self, value: float) -> None:
+        """Set this task's local completed amount."""
+        self._local_completed = value
 
     @property
     def local_total(self) -> Optional[float]:
@@ -182,7 +184,7 @@ class Task(DOMNode):
 
         # Find most recently updated child
         active_children = [
-            child for child in self._children.values() if child.last_updated is not None and child.progress > 0
+            child for child in self._children.values() if child.last_updated is not None and child.completed > 0
         ]
 
         if active_children:
@@ -191,8 +193,8 @@ class Task(DOMNode):
 
         return self.title
 
-    def watch__local_progress(self, value: float) -> None:
-        """Handle local progress changes."""
+    def watch__local_completed(self, value: float) -> None:
+        """Handle local completed changes."""
         self.last_updated = time()
         self._update_aggregation()
 
@@ -203,10 +205,10 @@ class Task(DOMNode):
         self._update_aggregation()
 
     def _update_aggregation(self, *args) -> None:
-        """Update aggregated progress and total from local values and children."""
-        # Calculate aggregated progress
-        child_progress = sum(child.progress for child in self._children.values())
-        self.progress = self._local_progress + child_progress
+        """Update aggregated completed and total from local values and children."""
+        # Calculate aggregated completed
+        child_completed = sum(child.completed for child in self._children.values())
+        self.completed = self._local_completed + child_completed
 
         # Calculate aggregated total
         if not self._children:
@@ -241,7 +243,7 @@ class Task(DOMNode):
         # Set appropriate state class
         if self.is_indeterminate:
             self.add_class("indeterminate")
-        elif self.progress == 0:
+        elif self.completed == 0:
             self.add_class("pending")
         elif self.percentage and self.percentage >= 1.0:
             self.add_class("complete")
@@ -249,31 +251,121 @@ class Task(DOMNode):
             self.add_class("active")
 
     def advance(self, amount: float = 1.0) -> None:
-        """Advance local progress by the given amount.
+        """Advance local completed by the given amount.
 
         Args:
-            amount: Amount to advance progress by
+            amount: Amount to advance completed by
         """
-        self.local_progress += amount
+        self.local_completed += amount
 
     def reset(self) -> None:
-        """Reset local progress to zero and clear timing."""
-        self._local_progress = 0.0
+        """Reset local completed to zero and clear timing."""
+        self._local_completed = 0.0
         self.start_time = None
         self.last_updated = None
+        self.remove_class("active", "complete", "failed")
+        self.add_class("pending")
 
     def complete(self) -> None:
-        """Mark this progress as complete."""
+        """Mark this task as complete."""
         if self._local_total is not None:
-            self._local_progress = self._local_total
+            self._local_completed = self._local_total
+        self.remove_class("pending", "active", "failed")
         self.add_class("complete")
 
     def fail(self, reason: str = "") -> None:
-        """Mark this progress as failed.
+        """Mark this task as failed.
 
         Args:
             reason: Optional failure reason
         """
+        self.remove_class("pending", "active", "complete")
         self.add_class("failed")
         # Note: Store reason in a custom attribute if needed
-        # DOMNode doesn't have set_attribute, so we'll skip storing the reason for now
+
+    def subtask(self, key: str, total: Optional[float] = None) -> "Task":
+        """Get or create a subtask in pending state.
+
+        Args:
+            key: Identifier for the subtask
+            total: Total steps for the subtask (None for indeterminate)
+
+        Returns:
+            The subtask (created if it doesn't exist)
+        """
+        if key not in self._children:
+            child = Task(title=key, total=total)
+            self._children[key] = child
+            self.mount(child)
+
+            # Watch child for changes to aggregate up
+            child.watch("completed", self._update_aggregation)
+            child.watch("total", self._update_aggregation)
+            child.watch("title", self._update_aggregation)
+
+        return self._children[key]
+
+    async def __aenter__(self):
+        """Mark task as active when entering async context."""
+        self.remove_class("pending", "complete", "failed")
+        self.add_class("active")
+        if self.start_time is None:
+            self.start_time = time()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Mark complete or failed when exiting async context."""
+        if exc_type is None:
+            self.complete()
+        else:
+            self.fail(str(exc_val) if exc_val else "Task failed")
+        # Don't suppress exceptions
+        return False
+
+    def to_rich_task(self, task_id: Optional[int] = None) -> RichTask:
+        """Create a Rich Task that mirrors this Task's state.
+
+        Args:
+            task_id: Optional task ID (will generate one if not provided)
+
+        Returns:
+            Rich Task instance with current state
+        """
+        # Create a Rich Task with our current state
+        rich_task = RichTask(
+            id=TaskID(task_id or hash(self) % 1000000),
+            description=self.title,
+            total=self.total,
+            completed=self.completed,
+            _get_time=time,
+            visible=True,
+            fields={},
+            _lock=RLock(),
+        )
+
+        return rich_task
+
+    @staticmethod
+    def get_rich_spinner_names() -> list[str]:
+        """Get all available Rich spinner names.
+
+        Returns:
+            List of spinner names
+        """
+        return list(SPINNERS.keys())
+
+    @staticmethod
+    def get_rich_spinner_frames(name: str) -> tuple[list[str], int]:
+        """Get frames and interval for a Rich spinner.
+
+        Args:
+            name: Spinner name
+
+        Returns:
+            Tuple of (frames, interval_ms)
+        """
+        if name not in SPINNERS:
+            raise ValueError(f"Unknown spinner: {name}. Available: {list(SPINNERS.keys())[:5]}...")
+
+        spinner_data = SPINNERS[name]
+        return spinner_data["frames"], spinner_data.get("interval", 80)

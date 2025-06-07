@@ -35,7 +35,7 @@ dist: scripts/dist.sh ## build the distributable files
 release: scripts/release.sh ## publish to pypi
 	scripts/release.sh $(PROJECT_NAME)
 
-demo: install ## run the demo app with auto-restart on file changes
+demo: dev ## run the demo app with auto-restart on file changes
 	. .venv/bin/activate && python ./scripts/run.py bash -c ". .venv/bin/activate && python ./demos/demo.py --dev"
 
 # Caching doesn't work if we depend on PHONY targets

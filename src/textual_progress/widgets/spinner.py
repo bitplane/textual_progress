@@ -12,6 +12,7 @@ from typing import Optional, TYPE_CHECKING
 
 from textual.widget import Widget
 from textual.reactive import reactive
+from rich.spinner import SPINNERS
 
 if TYPE_CHECKING:
     from ..task import Task
@@ -31,9 +32,10 @@ class Spinner(Widget):
 
     DEFAULT_CSS = """
     Spinner {
-        width: auto;
+        width: 21;
         height: 1;
-        text-align: center;
+        text-align: left;
+        content-align: left middle;
     }
     """
 
@@ -175,3 +177,19 @@ class Spinner(Widget):
     def on_unmount(self) -> None:
         """Handle widget unmounting - stop spinning."""
         self._stop_spinning()
+
+    def set_rich_spinner(self, name: str) -> None:
+        """Set the spinner to use a Rich spinner by name.
+
+        Args:
+            name: Name of the Rich spinner to use
+        """
+        if name not in SPINNERS:
+            available = list(SPINNERS.keys())[:5]
+            raise ValueError(f"Unknown spinner '{name}'. Available: {available}...")
+
+        spinner_data = SPINNERS[name]
+        self.frames = spinner_data["frames"]
+        # Convert interval from milliseconds to seconds
+        interval_ms = spinner_data.get("interval", 80)
+        self.speed = interval_ms / 1000.0
