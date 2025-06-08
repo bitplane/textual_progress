@@ -103,11 +103,11 @@ class AppRunner:
 def main():
     if len(sys.argv) < 2:
         print("Usage: python run.py <command> [args...]")
-        print("Example: python run.py python ./demos/demo.py --dev")
+        print("Example: python run.py python ./demo/demo.py --dev")
         sys.exit(1)
 
     command = sys.argv[1:]
-    watch_dirs = ["src", "demos"]
+    watch_dirs = ["src", "demo"]
 
     # Check if watch directories exist
     existing_dirs = [d for d in watch_dirs if Path(d).exists()]
