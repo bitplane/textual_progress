@@ -46,7 +46,7 @@ def start_percent_task(task: Task, app_instance) -> None:
             if not task or task.has_class("failed"):
                 logging.info(f"Percent task stopped: {task.title}")
                 break
-            task.local_completed = i
+            task.completed = i
             if i % 10 == 0:  # Log every 10%
                 logging.info(f"Percent task progress: {task.title} {i}/{total}")
             await asyncio.sleep(0.1)

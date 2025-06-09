@@ -61,7 +61,7 @@ class TaskInfo(Widget):
         # Create compact single-line display like Textual's ProgressBar
         title = f"[bold]{self.task.title}[/bold]"
 
-        if self.task.is_indeterminate:
+        if self.task.indeterminate:
             progress_info = "[dim]indeterminate[/dim]"
         else:
             pct = self.task.percentage
