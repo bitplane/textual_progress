@@ -13,6 +13,7 @@ from typing import Optional, TYPE_CHECKING
 from textual.widget import Widget
 from textual.reactive import reactive
 from rich.spinner import SPINNERS
+from rich.text import Text
 
 if TYPE_CHECKING:
     from ..task import Task
@@ -68,20 +69,21 @@ class Spinner(Widget):
             self.frames = frames
         self.speed = speed
 
-    def render(self) -> str:
+    def render(self) -> Text:
         """Render the current spinner frame.
 
         Returns:
-            The current character to display
+            The current character to display as a Text object
         """
         if not self.frames:
-            return " "
+            return Text(" ")
         if not self._is_spinning:
             if self.task is None:
-                return "○"  # Show placeholder when no task
+                return Text("○")  # Show placeholder when no task
             else:
-                return "●"  # Show filled circle when task is stopped/complete
-        return self.frames[self._current_frame]
+                return Text("●")  # Show filled circle when task is stopped/complete
+        # Return frame as Text object to avoid markup parsing issues
+        return Text(self.frames[self._current_frame])
 
     def watch_task(self, task: Optional["Task"]) -> None:
         """Handle changes to the task being watched.

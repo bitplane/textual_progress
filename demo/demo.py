@@ -12,6 +12,7 @@ from textual.reactive import reactive
 
 from textual_progress import Task, TaskInfo
 from spinners import SpinnersTab
+from progress_tab import ProgressTab
 from tasks import TASK_REGISTRY
 
 
@@ -115,6 +116,8 @@ class ProgressDemo(App):
                 with TabbedContent(id="main-tabs"):
                     with TabPane("Spinners", id="spinners-tab"):
                         yield SpinnersTab(id="spinners-content")
+                    with TabPane("Progress", id="progress-tab"):
+                        yield ProgressTab(id="progress-content")
 
         # Log panel (bottom, full width)
         with Vertical(id="log-panel"):
@@ -163,7 +166,14 @@ class ProgressDemo(App):
         try:
             spinners_tab = self.query_one("#spinners-content", SpinnersTab)
             spinners_tab.update_spinners_task(task)
-        except:
+        except Exception:
+            pass
+
+        # Update progress bars in the ProgressTab
+        try:
+            progress_tab = self.query_one("#progress-content", ProgressTab)
+            progress_tab.update_task(task)
+        except Exception:
             pass
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
